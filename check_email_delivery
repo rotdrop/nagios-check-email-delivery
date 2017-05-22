@@ -18,6 +18,7 @@ BEGIN {
 # get options from command line
 Getopt::Long::Configure("bundling");
 my $verbose = 0;
+my $sub_verbose = "";
 my $help = "";
 my $help_usage = "";
 my $show_version = "";
@@ -34,11 +35,14 @@ my $imap_port = "";
 my $imap_username = "";
 my $imap_password = "";
 my $imap_mailbox = "";
+my $imap_archive = "";
+my $imap_delete = 1;
 my $username = "";
 my $password = "";
 my $ssl = "";
 my $imap_ssl = "";
 my $imap_tls = "";
+my $imap_download = "";
 my $mailto = "";
 my $mailfrom = "";
 my @header = ();
@@ -94,9 +98,12 @@ $ok = Getopt::Long::GetOptions(
 	"imap-server=s"=>\$imap_server,"imap-port=i"=>\$imap_port,
 	"imap-username=s"=>\$imap_username,"imap-password=s"=>\$imap_password,
 	"imap-mailbox=s"=>\$imap_mailbox,
+	"imap-archive=s"=>\$imap_archive,
+        "imap-delete!" => \$imap_delete,
 	"imap-check-interval=i"=>\$imap_interval,"imap-retries=i"=>\$imap_retries,
 	"imap-ssl!"=>\$imap_ssl,
 	"imap-tls!"=>\$imap_tls,
+        "imap-download!" => \$imap_download,
 	# Time
 	"hires"=>\$time_hires,
 	);
@@ -140,6 +147,10 @@ if( $ssl ) {
 	$imap_ssl = $ssl if $imap_ssl eq "";
 	$smtp_tls = $ssl if $smtp_tls eq "";
 	$imap_tls = $ssl if $imap_tls eq "";
+}
+
+if ($verbose >= 3) {
+  $sub_verbose = "-v -v -v";
 }
 
 if( $help_usage
@@ -202,6 +213,7 @@ $smtp_options .= "-U ".shellquote($smtp_username)." " if defined $smtp_username 
 $smtp_options .= "-P ".shellquote($smtp_password)." " if defined $smtp_password and $smtp_password ne "";
 $smtp_options .= "--mailto ".shellquote($mailto)." " if defined $mailto and $mailto ne "";
 $smtp_options .= "--mailfrom ".shellquote($mailfrom)." " if defined $mailfrom and $mailfrom ne "";
+$smtp_options .= $sub_verbose;
 foreach my $h( @header ) {
 	$smtp_options .= "--header ".shellquote($h)." ";
 }
@@ -211,8 +223,13 @@ $imap_options .= "-p $imap_port " if defined $imap_port and $imap_port ne "";
 $imap_options .= "-U ".shellquote($imap_username)." " if defined $imap_username and $imap_username ne "";
 $imap_options .= "-P ".shellquote($imap_password)." " if defined $imap_password and $imap_password ne "";
 $imap_options .= "--mailbox ".shellquote($imap_mailbox)." " if defined $imap_mailbox and $imap_mailbox ne "";
+$imap_options .= "--archive ".shellquote($imap_archive)." " if defined $imap_archive and $imap_archive ne "";
+$imap_options .= "--delete " if defined $imap_delete and $imap_delete;
+$imap_options .= "--nodelete " if defined $imap_delete and !$imap_delete;
 $imap_options .= "--ssl " if defined $imap_ssl and $imap_ssl;
 $imap_options .= "--tls " if defined $imap_tls and $imap_tls;
+$imap_options .= "--download " if defined $imap_download and $imap_download;
+$imap_options .= $sub_verbose;
 
 
 # create the report object
@@ -336,17 +353,22 @@ if( scalar(@plugins) ) {
 else {
 	# not using plugins.
 	$time_start = time;
-	
+
 	# send email via SMTP	
 	my $id = $time_start; # XXX should include localhost name maybe or some random number in case the same mailbox is used for multiple delivery tests
-	
+
 	my $smtp_plugin = "$libexec/check_smtp_send";
 	$smtp_plugin = "$libexec/check_smtp_send.pl" unless -e $smtp_plugin;
 	my $smtp_timeout = shift(@alarm_times) || $default_timeout;
 	eval {
 		local $SIG{ALRM} = sub { die "exceeded timeout $smtp_timeout seconds\n" }; # NB: \n required, see `perldoc -f alarm`
 		alarm $smtp_timeout;
-		my $smtp = `$smtp_plugin $smtp_options --hello $smtp_helo --header 'Subject: $subject_tag SENDER $smtp_helo SMTP $smtp_server ID $id.' --body 'Nagios Email Delivery Plugin\n$body' $smtp_thresholds`;
+                my $smtp_command = "$smtp_plugin $smtp_options --helo $smtp_helo --header 'Subject: $subject_tag SENDER $smtp_helo SMTP $smtp_server ID $id.' --body 'Nagios Email Delivery Plugin\n$body' $smtp_thresholds";
+		#my $smtp = `$smtp_plugin $smtp_options --helo $smtp_helo --header 'Subject: $subject_tag SENDER $smtp_helo SMTP $smtp_server ID $id.' --body 'Nagios Email Delivery Plugin\n$body' $smtp_thresholds`;
+                if ($verbose >= 1) {
+                  print "$smtp_command\n";
+                }
+                my $smtp = `$smtp_command`;
 		if( $smtp !~ m/OK|WARNING|CRITICAL/ ) {
 			print "EMAIL DELIVERY UNKNOWN - smtp unknown: $smtp\n";
 			exit $status{UNKNOWN};
@@ -363,19 +385,29 @@ else {
 		print "EMAIL DELIVERY CRITICAL - Could not connect to SMTP server $smtp_server: $@\n";
 		exit $status{CRITICAL};	
 	}
-	
+
 	# wait before checking the delivery
 	$wait = shift(@wait_times) || $default_wait;
 	sleep $wait;
-	
-	# check email via IMAP
+
+	# check email via IMA<P
 	my $imap_plugin = "$libexec/check_imap_receive";
 	$imap_plugin = "$libexec/check_imap_receive.pl" unless -e $imap_plugin;
 	my $imap_timeout = shift(@alarm_times) || $default_timeout;
 	eval {
 		local $SIG{ALRM} = sub { die "exceeded timeout $imap_timeout seconds\n" }; # NB: \n required, see `perldoc -f alarm`
 		alarm $imap_timeout;
-		my $imap = `$imap_plugin $imap_options -s SUBJECT -s '$subject_tag SMTP $smtp_server ID' --capture-max '$subject_tag SMTP $smtp_server ID (\\d+)' --delete --nodelete-captured $imap_thresholds`;
+                my $subject_prefix = "$subject_tag SENDER $smtp_helo SMTP $smtp_server ID";
+                (my $subject_re = $subject_prefix) =~ s/\s/\\s+/g;
+                $subject_re .= " (\\d+)";
+                my $imap_command = "$imap_plugin $imap_options -s SUBJECT -s '$subject_prefix' --capture-max '$subject_re' --nodelete-captured $imap_thresholds";
+                if ($verbose >= 1) {
+                  print "$imap_command\n";
+                }
+                my $imap = `$imap_command`;
+                if ($verbose) {
+                  print "$imap\n";
+                }
 		if( $imap !~ m/OK|WARNING|CRITICAL/ ) {
 			print "EMAIL DELIVERY UNKNOWN - imap unknown: $imap\n";
 			exit $status{UNKNOWN};

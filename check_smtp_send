@@ -205,27 +205,14 @@ if( $template ) {
 
 $smtp->mail($mailfrom);
 foreach( @mailto ) {
-	# the two SMTP modules have different error reporting mechanisms:
-	if( $tls ) {
-		# Net::SMTP::TLS croaks when the recipient is rejected
-		eval {
-			$smtp->to($_);			
-		};
-		if( $@ ) {
-			print "SMTP SEND CRITICAL - Could not send to $_\n";
-			print "Reason: $@\n" if $verbose;
-			exit $status{CRITICAL};			
-		}
-	}
-	else {
-		# Net::SMTP returns false when the recipient is rejected
-		my $to_returned = $smtp->to($_);
-		if( !$to_returned ) { 
-			print "SMTP SEND CRITICAL - Could not send to $_\n";
-			print "Reason: Recipient rejected or authentication failed\n" if $verbose;
-			exit $status{CRITICAL};
-		}
-	}
+        # Net::SMTP returns false when the recipient is rejected
+        my $to_returned = $smtp->to($_);
+        
+        if( !$to_returned ) { 
+                print "SMTP SEND CRITICAL - Could not send to $_\n";
+                print "Reason: Recipient rejected or authentication failed\n" if $verbose;
+                exit $status{CRITICAL};
+        }
 }
 
 # Net::SMTP::TLS doesn't implement code() so we need to wrap calls in eval to get our error messages
@@ -248,10 +235,10 @@ eval {
 	$smtp->dataend();	
 };
 if( $@ ) {
-	$actual_response = $tls ? get_tls_error($@) : $smtp->code();
+	$actual_response = $smtp->code();
 }
 else {
-	$actual_response = $tls ? "250" : $smtp->code();	# no error means we got 250		
+	$actual_response = $smtp->code();	# no error means we got 250		
 }
 
 eval {

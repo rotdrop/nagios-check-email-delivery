@@ -28,6 +28,7 @@ my $imap_port = "";
 my $username = "";
 my $password = "";
 my $mailbox = "INBOX";
+my $archive = "";
 my @search = ();
 my $search_critical_min = 1;
 my $search_critical_max = -1; # -1 means disabled for this option
@@ -53,20 +54,36 @@ my $time_hires = "";
 my $ok;
 $ok = Getopt::Long::GetOptions(
 	"V|version"=>\$show_version,
-	"v|verbose+"=>\$verbose,"h|help"=>\$help,"usage"=>\$help_usage,
-	"w|warning=i"=>\$warntime,"c|critical=i"=>\$criticaltime,"t|timeout=i"=>\$timeout,
+	"v|verbose+"=>\$verbose,
+        "h|help"=>\$help,
+        "usage"=>\$help_usage,
+	"w|warning=i"=>\$warntime,
+        "c|critical=i"=>\$criticaltime,
+        "t|timeout=i"=>\$timeout,
 	# imap settings
-	"H|hostname=s"=>\$imap_server,"p|port=i"=>\$imap_port,
-	"U|username=s"=>\$username,"P|password=s"=>\$password, "m|mailbox=s"=>\$mailbox,
-	"imap-check-interval=i"=>\$interval,"imap-retries=i"=>\$max_retries,
-	"ssl!"=>\$ssl, "ssl-ca-file=s"=>\$ssl_ca_file, "tls!"=>\$tls,
+	"H|hostname=s"=>\$imap_server,
+        "p|port=i"=>\$imap_port,
+	"U|username=s"=>\$username,
+        "P|password=s"=>\$password,
+        "m|mailbox=s"=>\$mailbox,
+        "a|archive=s"=>\$archive,
+	"imap-check-interval=i"=>\$interval,
+        "imap-retries=i"=>\$max_retries,
+	"ssl!"=>\$ssl, 
+        "ssl-ca-file=s"=>\$ssl_ca_file,
+        "tls!"=>\$tls,
 	# search settings
 	"s|search=s"=>\@search,
-	"search-critical-min=i"=>\$search_critical_min, "search-critical-max=i"=>\$search_critical_max,
-	"search-warning-min=i"=>\$search_warning_min, "search-warning-max=i"=>\$search_warning_max,
-	"capture-max=s"=>\$capture_max, "capture-min=s"=>\$capture_min,
-	"delete!"=>\$delete, "nodelete-captured"=>\$no_delete_captured,
-	"download!"=>\$download, "download_max=i"=>\$download_max, "download-max=i"=>\$download_max,
+	"search-critical-min=i"=>\$search_critical_min,
+        "search-critical-max=i"=>\$search_critical_max,
+	"search-warning-min=i"=>\$search_warning_min,
+        "search-warning-max=i"=>\$search_warning_max,
+	"capture-max=s"=>\$capture_max,
+        "capture-min=s"=>\$capture_min,
+	"delete!"=>\$delete,
+        "nodelete-captured"=>\$no_delete_captured,
+	"download!"=>\$download,
+        "download_max=i"=>\$download_max, "download-max=i"=>\$download_max,
 	"peek!"=>\$peek,
 	"template!"=>\$template,
 	# Time
@@ -170,52 +187,103 @@ unless( $imap ) {
 my $time_connected = time;
 
 # select a mailbox
-print "selecting mailbox $mailbox\n" if $verbose > 2;
-unless( $imap->select($mailbox) ) {
-	print "IMAP RECEIVE CRITICAL - Could not select $mailbox: $@ $!\n";
-	if( $verbose > 2 ) {
-		print "Mailbox list:\n" . join("\n", $imap->folders) . "\n";
-		print "Mailbox separator: " . $imap->separator . "\n";
-		##print "Special mailboxes:\n" . join("\n", map { "$_ => ".
-	}
-	$imap->logout();
-	exit $status{CRITICAL};
+sub select_mailbox {
+        my ($imap, $box) = @_;
+        print "selecting mailbox $box\n" if $verbose > 2;
+        $imap->close;
+        unless( $imap->select($box) ) {
+                print "IMAP RECEIVE CRITICAL - Could not select $mailbox: $@ $!\n";
+                if( $verbose > 2 ) {
+                        print "Mailbox list:\n" . join("\n", $imap->folders) . "\n";
+                        print "Mailbox separator: " . $imap->separator . "\n";
+                        ##print "Special mailboxes:\n" . join("\n", map { "$_ => ".
+                }
+                $imap->logout();
+                exit $status{CRITICAL};
+        }
 }
 
+select_mailbox($imap, $mailbox);
 
 # search for messages
 my $tries = 0;
 my @msgs;
 until( scalar(@msgs) != 0 || $tries >= $max_retries ) {
 	eval {
-		$imap->select( $mailbox );
-		# if download flag is on, we download recent messages and search ourselves
-		if( $download )  {
-			print "downloading messages to search\n" if $verbose > 2;
-			@msgs = download_and_search($imap,@search);
-		}
-		else {
-			print "searching on server\n" if $verbose > 2;
-			@msgs = $imap->search(@search);
-			die "Invalid search parameters: $@" if $@;
-		}
-	};
-	if( $@ ) {
-		chomp $@;
-		print "Cannot search messages: $@\n";
-		$imap->close();
-		$imap->logout();
-		exit $status{UNKNOWN};
-	}	
+                print "processing $mailbox\n" if $verbose;
+                # if download flag is on, we download recent messages and search ourselves
+                if( $download )  {
+                        print "downloading messages to search\n" if $verbose > 2;
+                        @msgs = download_and_search($imap, @search);
+                } else {
+                        print "searching on server\n" if $verbose > 2;
+                        if ($verbose >= 3) {
+                                foreach my $s (@search) {
+                                        print "$s\n";
+                                }
+                        }
+                        @msgs = $imap->search(@search);
+                        die "Invalid search parameters: $@" if $@;
+                }
+                print "Found ".scalar(@msgs)." messages.\n" if $verbose;
+        };
+        if( $@ ) {
+                chomp $@;
+                print "Cannot search messages: $@\n";
+                $imap->close();
+                $imap->logout();
+                exit $status{UNKNOWN};
+        }
 	$report->{found} = scalar(@msgs);
 	$tries++;
 	sleep $interval unless (scalar(@msgs) != 0 || $tries >= $max_retries);
 }
+print "Found ".scalar(@msgs)." messages.\n" if $verbose;
+my @incoming_msgs = @msgs;
+
+# once again, just too lazy now to write another baroque perl sub-routine
+if ($archive) {
+        select_mailbox($imap, $archive);
+        my @archive_msgs;
+        eval {
+                print "processing $archive\n" if $verbose;
+                # if download flag is on, we download recent messages and search ourselves
+                if( $download )  {
+                        print "downloading messages to search\n" if $verbose > 2;
+                        @archive_msgs = download_and_search($imap, @search);
+                } else {
+                        print "searching on server\n" if $verbose > 2;
+                        if ($verbose >= 3) {
+                                foreach my $s (@search) {
+                                        print "$s\n";
+                                }
+                        }
+                        @archive_msgs = $imap->search(@search);
+                        die "Invalid search parameters: $@" if $@;
+                }
+                print "Found ".scalar(@archive_msgs)." messages.\n" if $verbose;
+        };
+        if( $@ ) {
+                chomp $@;
+                print "Cannot search messages: $@\n";
+                $imap->close();
+                $imap->logout();
+                exit $status{UNKNOWN};
+        }
+        print "Found ".scalar(@msgs)." messages.\n" if $verbose;
+        print "Found ".scalar(@archive_msgs)." messages.\n" if $verbose;
+        @msgs = (@msgs, @archive_msgs);
+        $report->{found} = scalar(@msgs);
+        select_mailbox($imap, $mailbox);
+}
+
+print "Found ".scalar(@msgs)." messages total.\n" if $verbose;
 
 sub download_and_search {
 	my ($imap,@search) = @_;
 	my $ims = new ImapMessageSearch;
-	$ims->querytokens(@search);	
+        my @msgs;
+	$ims->querytokens(@search);
 	my @found = ();
 	@msgs = reverse $imap->messages or (); # die "Cannot list messages: $@\n"; # reversing to get descending order, which is most recent messages first! (at least on my mail servers)
 	@msgs = @msgs[0..$download_max-1] if $download_max && scalar(@msgs) > $download_max;
@@ -260,7 +328,7 @@ if( $capture_max || $capture_min ) {
 
 # delete messages
 if( $delete ) {
-	print "deleting matching messages\n" if $verbose > 2;
+	print "deleting matching messages\n" if $verbose;
 	my $deleted = 0;
 	for (my $i=0;$i < scalar(@msgs); $i++) 	{
 		next if ($no_delete_captured && ($captured_max_id eq $msgs[$i]));
@@ -270,6 +338,16 @@ if( $delete ) {
 	}
 	$report->{deleted} = $deleted;
 	$imap->expunge() if $deleted;
+}
+
+# move (remaining) messages
+if ($archive) {
+        my $archived = 0;
+	for (my $i=0;$i < scalar(@incoming_msgs); $i++) 	{
+                $archived++ if $imap->move($archive, $incoming_msgs[$i]);
+        }
+        $report->{archived} = $archived;
+	$imap->expunge() if $archived;
 }
 
 # deselect the mailbox
@@ -297,8 +375,9 @@ push @warning, "connection time more than $warntime" if( $time_connected - $time
 push @critical, "connection time more than $criticaltime" if( $time_connected - $time_start > $criticaltime );
 
 # print report and exit with known status
-my $perf_data = "elapsed=".$report->{seconds}."s found=".$report->{found}."messages captured=".$report->{captured}."messages"; # TODO: need a component for safely generating valid perf data format. for notes on the format, see http://www.perfparse.de/tiki-view_faq.php?faqId=6 and http://nagiosplug.sourceforge.net/developer-guidelines.html#AEN185
-my $short_report = $report->text(qw/seconds found captured max min deleted/) . " | $perf_data";
+my $perf_data = "elapsed=".$report->{seconds}."s found=".$report->{found}."messages captured=".$report->{captured}."messages";
+# TODO: need a component for safely generating valid perf data format. for notes on the format, see http://www.perfparse.de/tiki-view_faq.php?faqId=6 and http://nagiosplug.sourceforge.net/developer-guidelines.html#AEN185
+my $short_report = $report->text(qw/seconds found captured max min deleted archived/) . " | $perf_data";
 if( scalar @critical ) {
 	my $crit_alerts = join(", ", @critical);
 	print "IMAP RECEIVE CRITICAL - $crit_alerts; $short_report\n";
@@ -996,4 +1075,8 @@ Jonathan Buhacoff <jonathan@buhacoff.net>
  http://www.gnu.org/licenses/gpl.txt
 
 =cut
+
+# LocalVariables: ***
+# cperl-indent-level: 8 ***
+# End: ***
 
