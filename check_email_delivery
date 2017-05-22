@@ -130,6 +130,10 @@ if( $password ) {
 	$imap_password = $password if $imap_password eq "";
 }
 
+if ($smtp_tls) {
+        $smtp_port = 587 if $smtp_port eq "";
+}
+
 if( $ssl ) {
 	$imap_ssl = $ssl if $imap_ssl eq "";
 	$smtp_tls = $ssl if $smtp_tls eq "";
