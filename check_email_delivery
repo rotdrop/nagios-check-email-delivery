@@ -23,6 +23,7 @@ my $help_usage = "";
 my $show_version = "";
 my $host = "";
 my $subject_tag = "Nagios Message";
+my $smtp_helo = "localhost.localdomain";
 my $smtp_server = "";
 my $smtp_port = "";
 my $imap_server = "";
@@ -75,7 +76,8 @@ $ok = Getopt::Long::GetOptions(
 	"A|alert=i"=>\@alert_plugins,
 	"F|file=s"=>\$tokenfile,
 	# common settings
-        "T|tag=s"=>\$subject_tag,
+        "T|tag=s" => \$subject_tag,
+        "G|helo=s" => \$smtp_helo,
 	"H|hostname=s"=>\$host,
 	"U|username=s"=>\$username,"P|password=s"=>\$password,
 	"ssl!"=>\$ssl,
@@ -344,7 +346,7 @@ else {
 	eval {
 		local $SIG{ALRM} = sub { die "exceeded timeout $smtp_timeout seconds\n" }; # NB: \n required, see `perldoc -f alarm`
 		alarm $smtp_timeout;
-		my $smtp = `$smtp_plugin $smtp_options --header 'Subject: $subject_tag SMTP $smtp_server ID $id.' --body 'Nagios Email Delivery Plugin\n$body' $smtp_thresholds`;
+		my $smtp = `$smtp_plugin $smtp_options --hello $smtp_helo --header 'Subject: $subject_tag SENDER $smtp_helo SMTP $smtp_server ID $id.' --body 'Nagios Email Delivery Plugin\n$body' $smtp_thresholds`;
 		if( $smtp !~ m/OK|WARNING|CRITICAL/ ) {
 			print "EMAIL DELIVERY UNKNOWN - smtp unknown: $smtp\n";
 			exit $status{UNKNOWN};
