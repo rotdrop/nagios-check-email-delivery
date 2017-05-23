@@ -399,7 +399,7 @@ else {
 		alarm $imap_timeout;
                 my $subject_prefix = "$subject_tag SENDER $smtp_helo SMTP $smtp_server ID";
                 (my $subject_re = $subject_prefix) =~ s/\s/\\s+/g;
-                $subject_re .= " (\\d+)";
+                $subject_re .= "\\s(\\d+)";
                 my $imap_command = "$imap_plugin $imap_options -s SUBJECT -s '$subject_prefix' --capture-max '$subject_re' --nodelete-captured $imap_thresholds";
                 if ($verbose >= 1) {
                   print "$imap_command\n";
