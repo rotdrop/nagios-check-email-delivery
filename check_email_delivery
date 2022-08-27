@@ -390,7 +390,7 @@ else {
 	$wait = shift(@wait_times) || $default_wait;
 	sleep $wait;
 
-	# check email via IMA<P
+	# check email via IMAP
 	my $imap_plugin = "$libexec/check_imap_receive";
 	$imap_plugin = "$libexec/check_imap_receive.pl" unless -e $imap_plugin;
 	my $imap_timeout = shift(@alarm_times) || $default_timeout;
@@ -399,7 +399,7 @@ else {
 		alarm $imap_timeout;
                 my $subject_prefix = "$subject_tag SENDER $smtp_helo SMTP $smtp_server ID";
                 (my $subject_re = $subject_prefix) =~ s/\s/\\s+/g;
-                $subject_re .= "\\s(\\d+)";
+                $subject_re .= "\\s+(\\d+)";
                 my $imap_command = "$imap_plugin $imap_options -s SUBJECT -s '$subject_prefix' --capture-max '$subject_re' --nodelete-captured $imap_thresholds";
                 if ($verbose >= 1) {
                   print "$imap_command\n";
