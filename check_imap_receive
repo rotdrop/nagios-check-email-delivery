@@ -155,6 +155,8 @@ eval {
 		die IO::Socket::SSL::errstr() . " (if you get this only when using both --ssl and --ssl-ca-file, but not when using just --ssl, the server SSL certificate failed validation)" unless $socket;
 		$socket->autoflush(1);
 		$imap = Mail::IMAPClient->new(Socket=>$socket, Debug => 0 );
+                my $uid = $imap->Uid();
+                print "uid: $uid\n" if $verbose;
 		$imap->State(Mail::IMAPClient->Connected);
 		$imap->_read_line() if "$Mail::IMAPClient::VERSION" le "2.2.9"; # necessary to remove the server's "ready" line from the input buffer for old versions of Mail::IMAPClient. Using string comparison for the version check because the numeric didn't work on Darwin and for Mail::IMAPClient the next version is 2.3.0 and then 3.00 so string comparison works
 		$imap->User($username);
@@ -203,14 +205,14 @@ sub select_mailbox {
         }
 }
 
-select_mailbox($imap, $mailbox);
-
 # search for messages
 my $tries = 0;
 my @msgs;
 until( scalar(@msgs) != 0 || $tries >= $max_retries ) {
+        print "processing $mailbox\n" if $verbose;
+        print "search: @search\n" if $verbose;
+        select_mailbox($imap, $mailbox);
 	eval {
-                print "processing $mailbox\n" if $verbose;
                 # if download flag is on, we download recent messages and search ourselves
                 if( $download )  {
                         print "downloading messages to search\n" if $verbose > 2;
@@ -242,9 +244,9 @@ print "Found ".scalar(@msgs)." messages.\n" if $verbose;
 my @incoming_msgs = @msgs;
 
 # once again, just too lazy now to write another baroque perl sub-routine
+my @archive_msgs;
 if ($archive) {
         select_mailbox($imap, $archive);
-        my @archive_msgs;
         eval {
                 print "processing $archive\n" if $verbose;
                 # if download flag is on, we download recent messages and search ourselves
@@ -274,7 +276,6 @@ if ($archive) {
         print "Found ".scalar(@archive_msgs)." messages.\n" if $verbose;
         @msgs = (@msgs, @archive_msgs);
         $report->{found} = scalar(@msgs);
-        select_mailbox($imap, $mailbox);
 }
 
 print "Found ".scalar(@msgs)." messages total.\n" if $verbose;
@@ -287,14 +288,13 @@ sub download_and_search {
 	my @found = ();
 	@msgs = reverse $imap->messages or (); # die "Cannot list messages: $@\n"; # reversing to get descending order, which is most recent messages first! (at least on my mail servers)
 	@msgs = @msgs[0..$download_max-1] if $download_max && scalar(@msgs) > $download_max;
+        print "messages: @msgs\n" if $verbose;
 	foreach my $m (@msgs) {
 		my $message = $imap->message_string($m);
 		push @found, $m if $ims->match($message);
 	}
 	return @found;
 }
-
-
 
 # capture data in messages
 my $captured_max_id = "";
@@ -303,46 +303,79 @@ if( $capture_max || $capture_min ) {
 	my $max = undef;
 	my $min = undef;
 	my %captured = ();
-	for (my $i=0;$i < scalar(@msgs); $i++) 	{
-		my $message = $imap->message_string($msgs[$i]);
-		if( $message =~ m/$capture_max/ ) {
-			if( !defined($max) || $1 > $max ) {
-				$captured{ $i } = 1;
-				$max = $1;
-				$captured_max_id = $msgs[$i];
-			}
-		}
-		if( $message =~ m/$capture_min/ ) {
-			if( !defined($min) || $1 < $min ) {
-				$captured{ $i } = 1;
-				$min = $1;
-				$captured_min_id = $msgs[$i];
-			}
-		}
-		print $message if $verbose > 1;
-	}
+
+        sub capture {
+                my ($mailbox, @msgs) = @_;
+
+                select_mailbox($imap, $mailbox);
+
+        	for (my $i=0;$i < scalar(@msgs); $i++) 	{
+                        my $message = $imap->message_string($msgs[$i]);
+                        if( $capture_max && $message =~ m/$capture_max/ ) {
+                                print "Max: $msgs[$i]\n" if $verbose > 2;
+                                if( !defined($max) || $1 > $max ) {
+                                        $captured{ $i } = 1;
+                                        $max = $1;
+                                        $captured_max_id = $msgs[$i];
+                                }
+                        }
+                        if( $capture_min && $message =~ m/$capture_min/ ) {
+                                print "Min: $msgs[$i]\n" if $verbose > 2;
+                                if( !defined($min) || $1 < $min ) {
+                                        $captured{ $i } = 1;
+                                        $min = $1;
+                                        $captured_min_id = $msgs[$i];
+                                }
+                        }
+                        print $message if $verbose > 5;
+                }
+        }
+
+        capture($archive, @archive_msgs) if $archive;
+        capture($mailbox, @incoming_msgs);
+
 	$report->{captured} = scalar keys %captured;
 	$report->{max} = $max if defined $max;
 	$report->{min} = $min if defined $min;
 }
 
-# delete messages
-if( $delete ) {
-	print "deleting matching messages\n" if $verbose;
+sub delete_messages {
+	my ($mailbox, @msgs) = @_;
+
+        select_mailbox($imap, $mailbox);
+
 	my $deleted = 0;
 	for (my $i=0;$i < scalar(@msgs); $i++) 	{
-		next if ($no_delete_captured && ($captured_max_id eq $msgs[$i]));
-		next if ($no_delete_captured && ($captured_min_id eq $msgs[$i]));
+ 		if ($no_delete_captured &&
+                    (($captured_max_id eq $msgs[$i]) || ($captured_min_id eq $msgs[$i]))) {
+                        print "Keeping message $msgs[$i]\n" if $verbose > 2;
+                        next;
+                }
+                print "Deleting message $msgs[$i]!\n" if $verbose > 2;
 		$imap->delete_message($msgs[$i]);
 		$deleted++;
 	}
-	$report->{deleted} = $deleted;
-	$imap->expunge() if $deleted;
+        if ($deleted) {
+                print "Expunging messages\n" if $verbose;
+                $imap->expunge();
+        }
+	return $deleted;
+}
+
+# delete messages
+if( $delete ) {
+        print "cap-min: $captured_min_id\n" if $verbose > 2;
+        print "cap-max: $captured_max_id\n" if $verbose > 2;
+        $report->{deleted} += delete_messages($archive, @archive_msgs) if $archive;
+        $report->{deleted} += delete_messages($mailbox, @incoming_msgs);
 }
 
 # move (remaining) messages
 if ($archive) {
         my $archived = 0;
+
+        select_mailbox($imap, $mailbox);
+
 	for (my $i=0;$i < scalar(@incoming_msgs); $i++) 	{
                 $archived++ if $imap->move($archive, $incoming_msgs[$i]);
         }
