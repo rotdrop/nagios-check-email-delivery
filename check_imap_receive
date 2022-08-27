@@ -69,7 +69,7 @@ $ok = Getopt::Long::GetOptions(
         "a|archive=s"=>\$archive,
 	"imap-check-interval=i"=>\$interval,
         "imap-retries=i"=>\$max_retries,
-	"ssl!"=>\$ssl, 
+	"ssl!"=>\$ssl,
         "ssl-ca-file=s"=>\$ssl_ca_file,
         "tls!"=>\$tls,
 	# search settings
@@ -141,7 +141,7 @@ my $imap;
 eval {
 	local $SIG{ALRM} = sub { die "exceeded timeout $timeout seconds\n" }; # NB: \n required, see `perldoc -f alarm`
 	alarm $timeout;
-	
+
 	if( $ssl || $tls ) {
 		$imap_port = $default_imap_ssl_port unless $imap_port;
 		my %ssl_args = ();
@@ -164,8 +164,8 @@ eval {
 		$imap->login() or die "Cannot login: $@";
 	}
 	else {
-		$imap_port = $default_imap_port unless $imap_port;		
-		$imap = Mail::IMAPClient->new(Debug => 0 );		
+		$imap_port = $default_imap_port unless $imap_port;
+		$imap = Mail::IMAPClient->new(Debug => 0 );
 		$imap->Server("$imap_server:$imap_port");
 		$imap->User($username);
 		$imap->Password($password);
@@ -180,7 +180,7 @@ eval {
 if( $@ ) {
 	chomp $@;
 	print "IMAP RECEIVE CRITICAL - Could not connect to $imap_server port $imap_port: $@\n";
-	exit $status{CRITICAL};	
+	exit $status{CRITICAL};
 }
 unless( $imap ) {
 	print "IMAP RECEIVE CRITICAL - Could not connect to $imap_server port $imap_port: $@\n";
@@ -430,7 +430,7 @@ sub load_modules {
 	my @missing_modules = ();
 	foreach( @_ ) {
 		eval "require $_";
-		push @missing_modules, $_ if $@;	
+		push @missing_modules, $_ if $@;
 	}
 	if( @missing_modules ) {
 		print "Missing perl modules: @missing_modules\n";
@@ -489,7 +489,7 @@ sub querystring {
 sub querytokens {
 	my ($self,@tokens) = @_;
 	$self->{querytokens} = [@tokens];
-	$self->{queryfnlist} = [create_search_expressions(@tokens)]; 
+	$self->{queryfnlist} = [create_search_expressions(@tokens)];
 	return $self;
 }
 
@@ -524,12 +524,12 @@ sub create_search_expressions {
 	}
 	if( $token eq 'SUBJECT' ) {
 		my $value = shift @search;
-		return (sub {shift->header('Subject') =~ /\Q$value\E/i},create_search_expressions(@search));		
+		return (sub {shift->header('Subject') =~ /\Q$value\E/i},create_search_expressions(@search));
 	}
 	if( $token eq 'HEADER' ) {
 		my $name = shift @search;
 		my $value = shift @search;
-		return (sub {shift->header($name) =~ /\Q$value\E/i},create_search_expressions(@search));				
+		return (sub {shift->header($name) =~ /\Q$value\E/i},create_search_expressions(@search));
 	}
 	if( $token eq 'NOT' ) {
 		my @exp = create_search_expressions(@search);
@@ -544,15 +544,15 @@ sub create_search_expressions {
 	}
 	if( $token eq 'SENTBEFORE' ) {
 		my $value = shift @search;
-		return (sub {datecmp(shift->header('Date'),$value) < 0},create_search_expressions(@search));		
+		return (sub {datecmp(shift->header('Date'),$value) < 0},create_search_expressions(@search));
 	}
 	if( $token eq 'SENTON' ) {
 		my $value = shift @search;
-		return (sub {datecmp(shift->header('Date'),$value) == 0},create_search_expressions(@search));		
+		return (sub {datecmp(shift->header('Date'),$value) == 0},create_search_expressions(@search));
 	}
 	if( $token eq 'SENTSINCE' ) {
 		my $value = shift @search;
-		return (sub {datecmp(shift->header('Date'),$value) > 0},create_search_expressions(@search));		
+		return (sub {datecmp(shift->header('Date'),$value) > 0},create_search_expressions(@search));
 	}
 	return sub { die "invalid search parameter: $token" };
 }
@@ -635,10 +635,10 @@ Also known as: -c <seconds>
 =item --timeout <seconds>
 
 Abort with critical status if it takes longer than <seconds> to connect to the IMAP server. Default is 60 seconds.
-The difference between timeout and critical is that, with the default settings, if it takes 45 seconds to 
+The difference between timeout and critical is that, with the default settings, if it takes 45 seconds to
 connect to the server then the connection will succeed but the plugin will return CRITICAL because it took longer
 than 30 seconds.
-Also known as: -t <seconds> 
+Also known as: -t <seconds>
 
 =item --imap-check-interval <seconds>
 
@@ -665,12 +665,12 @@ Also known as: -p <number>
 
 =item --password <password>
 
-Username and password to use when connecting to IMAP server. 
+Username and password to use when connecting to IMAP server.
 Also known as: -U <username> -P <password>
 
 =item --mailbox <mailbox>
 
-Use this option to specify the mailbox to search for messages. Default is INBOX. 
+Use this option to specify the mailbox to search for messages. Default is INBOX.
 Also known as: -m <mailbox>
 
 =item --search <string>
@@ -704,15 +704,15 @@ Also known as: -s <string>
 This option causes all messages in the specified mailbox to be downloaded from the server
 and searched locally. See --download-max if you only want to download a few messages.
 Currently only the following RFC 2060 search criteria are supported:
-TEXT, BODY, SUBJECT, HEADER, NOT, OR, SENTBEFORE, SENTON, SENTSINCE. 
+TEXT, BODY, SUBJECT, HEADER, NOT, OR, SENTBEFORE, SENTON, SENTSINCE.
 
 Requires Email::Simple to be installed. It is available on CPAN.
 
 This option may be particularly useful to you if your mail server is slow to index
-messages (like Exchange 2003), causing the plugin not to find them with IMAP SEARCH 
-even though they are in the inbox. 
+messages (like Exchange 2003), causing the plugin not to find them with IMAP SEARCH
+even though they are in the inbox.
 
-It's also useful if you're searching for messages that have been on the server for a 
+It's also useful if you're searching for messages that have been on the server for a
 specified amount of time, like some minutes or hours, because the standard IMAP search
 function only allows whole dates. For this, use the standard search keywords but you
 can specify either just a date like in RFC 2060 or a date and a time.
@@ -744,7 +744,7 @@ is above the given number. Use in conjunction with --search.
 This parameter defaults to -1 meaning it's disabled. If you set it to 10, the plugin will exit with
 CRITICAL if it finds 11 messages. If you set it to 1, the plugin will exit with CRITICAL if it finds
 any more than 1 message. If you set it to 0, the plugin will exit with CRITICAL if it finds any messages
-at all. If you set it to -1 it will be disabled. 
+at all. If you set it to -1 it will be disabled.
 
 =item --search-warning-min <messages>
 
@@ -764,7 +764,7 @@ is above the given number. Use in conjunction with --search.
 This parameter defaults to -1 meaning it's disabled. If you set it to 10, the plugin will exit with
 WARNING if it finds 11 messages. If you set it to 1, the plugin will exit with WARNING if it finds
 any more than 1 message. If you set it to 0, the plugin will exit with WARNING if it finds any messages
-at all. If you set it to -1 it will be disabled. 
+at all. If you set it to -1 it will be disabled.
 
 =item --capture-max <regexp>
 
@@ -803,7 +803,7 @@ If you do not use the delete option, this option has no effect.
 
 =item --nossl
 
-Enable SSL protocol. Requires IO::Socket::SSL. 
+Enable SSL protocol. Requires IO::Socket::SSL.
 
 Using this option automatically changes the default port from 143 to 993. You can still
 override this from the command line using the --port option.
@@ -826,7 +826,7 @@ Only applicable when --ssl option is enabled.
 
 =item --notemplate
 
-Enable (or disable) processing of IMAP search parameters. Requires Text::Template and Date::Manip. 
+Enable (or disable) processing of IMAP search parameters. Requires Text::Template and Date::Manip.
 
 Use this option to apply special processing to IMAP search parameters that allows you to use the
 results of arbitrary computations as the parameter values. For example, you can use this feature
@@ -838,17 +838,17 @@ doesn't support that, you could use the --template option to get similar functio
 
 When you enable the --template option, each parameter you pass to the -s option is parsed by
 Text::Template. See the Text::Template manual for more information, but in general any expression
-written in Perl will work. 
+written in Perl will work.
 
 A convenience function called rfc2822dateHeader is provided to you so you can easily compute properly
 formatted dates for use as search parameters. The rfc2822date function can take one or two
-parameters itself: the date to format and an optional offset. To use the current time as a 
+parameters itself: the date to format and an optional offset. To use the current time as a
 search parameter, you can write this:
 
  $ check_imap_receive ... --template -s HEADER -s Delivery-Date -s '{rfc2822dateHeader("now")}'
 
 The output of {rfc2822dateHeader("now")} looks like this: Wed, 30 Sep 2009 22:44:03 -0700  and
-is suitable for use with a date header, like HEADER Delivery-Date. 
+is suitable for use with a date header, like HEADER Delivery-Date.
 
 To use a time in the past relative to the current time or day, you can use a second convenience function
 called rfc2822date and write this:
@@ -864,7 +864,7 @@ like September 17, 2009 9:46:51 AM PDT.  To specify an arbitrary format like thi
  $ check_imap_receive ... --template -s HEADER -s Delivery-Date -s '{date("%B %e, %Y %i:%M:%S %p %Z","now","-4 hours")}'
 
 You can use BEFORE, ON, SENTBEFORE, SENTON, SENTSINCE, or SINCE to search for messages that arrived
-on, before, or after a given day but not on, before, or after a specific time on that day. 
+on, before, or after a given day but not on, before, or after a specific time on that day.
 
 To search for messages that arrived on, before, or after a specific time you have to use the
 Delivery-Date or another date field, like with -s HEADER -s Delivery-Date in the example above.
@@ -892,12 +892,12 @@ Also known as: -V
 
 =item --help
 
-Display this documentation and exit. Does not work in the ePN version. 
+Display this documentation and exit. Does not work in the ePN version.
 Also known as: -h
 
 =item --usage
 
-Display a short usage instruction and exit. 
+Display a short usage instruction and exit.
 
 =back
 
@@ -986,7 +986,7 @@ http://search.cpan.org/~markov/Mail-IMAPClient-3.00/lib/Mail/IMAPClient.pod
  + added patch from Benjamin Ritcey <ben@ritcey.com> for SSL support on machines that have an SSL-enabled
  + version 0.2.3
 
- Fri Apr 27 18:56:50 PDT 2007 
+ Fri Apr 27 18:56:50 PDT 2007
  + fixed problem that "Invalid search parameters" was not printed because of missing newline to flush it
  + warnings and critical errors now try to append error messages received from the IMAP client
  + changed connection error to display timeout only if timeout was the error
@@ -1006,11 +1006,11 @@ http://search.cpan.org/~markov/Mail-IMAPClient-3.00/lib/Mail/IMAPClient.pod
 
  Sun Oct 21 20:41:56 PDT 2007
  + reworked ssl support to use IO::Socket::SSL instead of the convenience method Mail::IMAPClient->Ssl (which is not included in the standard Mail::IMAPClient package)
- + removed clarity shortcuts (bad idea, code bloat) 
+ + removed clarity shortcuts (bad idea, code bloat)
  + version 0.4
 
  Tue Dec  4 07:05:27 PST 2007
- + added version check to _read_line workaround for SSL-related bug in Mail::IMAPClient version 2.2.9 ; newer versions fixed the bug 
+ + added version check to _read_line workaround for SSL-related bug in Mail::IMAPClient version 2.2.9 ; newer versions fixed the bug
  + added --usage option because the official nagios plugins have both --help and --usage
  + added --timeout option to match the official nagios plugins
  + fixed some minor pod formatting issues for perldoc
@@ -1022,7 +1022,7 @@ http://search.cpan.org/~markov/Mail-IMAPClient-3.00/lib/Mail/IMAPClient.pod
 
  Mon Jan  7 21:35:23 PST 2008
  + changed version check for Mail::IMAPClient version 2.2.9 to use string comparison le "2.2.9"
- + fixed bug where script was dying on socket->autoflush when socket does not exist because autoflush was being called before checking the socket object 
+ + fixed bug where script was dying on socket->autoflush when socket does not exist because autoflush was being called before checking the socket object
  + version 0.4.3
 
  Mon Feb 11 19:13:38 PST 2008
@@ -1041,7 +1041,7 @@ http://search.cpan.org/~markov/Mail-IMAPClient-3.00/lib/Mail/IMAPClient.pod
  + version 0.5.1
 
  Sat Dec 13 08:57:29 PST 2008
- + added --download option to allow local searching of messages (useful if your server has an index that handles searching but it takes a while before new emails show up and you want immediate results), supports only the TEXT, BODY, SUBJECT, and HEADER search keys 
+ + added --download option to allow local searching of messages (useful if your server has an index that handles searching but it takes a while before new emails show up and you want immediate results), supports only the TEXT, BODY, SUBJECT, and HEADER search keys
  + added --download-max option to set a limit on number of messages downloaded with --download
  + version 0.6.0
 
@@ -1056,13 +1056,13 @@ http://search.cpan.org/~markov/Mail-IMAPClient-3.00/lib/Mail/IMAPClient.pod
  + version 0.7.0
 
  Fri Oct  2 15:22:00 PDT 2009
- + added --search-warning-max and --search-warning-min to trigger a WARNING alert if number of messages is more than or less than the specified number. 
+ + added --search-warning-max and --search-warning-min to trigger a WARNING alert if number of messages is more than or less than the specified number.
  + fixed --download option not to fail with CRITICAL if mailbox is empty; now this can be configured with --search-warning-min or --search-critical-min
  + version 0.7.1
 
  Sat Nov 21 18:27:17 PST 2009
  + fixed problem with using --download option on certain mail servers by turning on the IgnoreSizeErrors feature in IMAPClient
- + added --peek option to prevent marking messages as seen 
+ + added --peek option to prevent marking messages as seen
  + version 0.7.2
 
  Tue Jan  5 12:13:53 PST 2010
@@ -1112,4 +1112,3 @@ Jonathan Buhacoff <jonathan@buhacoff.net>
 # LocalVariables: ***
 # cperl-indent-level: 8 ***
 # End: ***
-

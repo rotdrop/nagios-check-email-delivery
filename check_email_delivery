@@ -159,7 +159,7 @@ if( $help_usage
 		scalar(@plugins) == 0
 		&&
 		(
-			$smtp_server eq "" || $mailto eq "" || $mailfrom eq "" 
+			$smtp_server eq "" || $mailto eq "" || $mailfrom eq ""
 			|| $imap_server eq ""
                         || $smtp_username eq "" || $smtp_password eq ""
                         || $imap_username eq "" || $imap_password eq ""
@@ -250,7 +250,7 @@ my %formats = (
 	'h' => sub { pick_random(@hex) },
 	'U' => sub { time },
 	'X' => sub { pick_random(@pgp_even) },
-	'Y' => sub { pick_random(@pgp_odd) },	
+	'Y' => sub { pick_random(@pgp_odd) },
 );
 if( scalar(@plugins) ) {
 	# scan the plugin commands for use of tokens to count how many we need
@@ -273,7 +273,7 @@ if( scalar(@plugins) ) {
 			}
 			else {
 				$token .= $c;
-			}			
+			}
 		}
 		push @tokens, $token;
 	}
@@ -331,21 +331,21 @@ if( scalar(@plugins) ) {
 		if( $@ && $alert_plugins{$i} ) {
 			print "EMAIL DELIVERY CRITICAL - Could not run plugin $i: $@\n";
 			print "Plugin $i: $p\n" if $verbose;
-			exit $status{CRITICAL};	
+			exit $status{CRITICAL};
 		}
 		# if this wasn't the last plugin, wait before continuing
 		if( $i < scalar(@plugins) ) {
 			my $wait = shift(@wait_times) || $default_wait;
-			sleep $wait;			
+			sleep $wait;
 		}
-		# compatibility with the "not using plugins" method... pretend to calculate the total round trip time (the delay) using data from the plugins ... 
+		# compatibility with the "not using plugins" method... pretend to calculate the total round trip time (the delay) using data from the plugins ...
 		$report->{max} = 0;
-		$report->{delay} = 0;		
+		$report->{delay} = 0;
 	}
 	# register the list of reports
 	foreach my $r ( 1..scalar(@plugins)) {
-		push @report_plugins, "plugin".$r;		
-	} 
+		push @report_plugins, "plugin".$r;
+	}
 	# record tokens in a file if option is enabled
 	my $tmp_long_report = join(", ", map { "$_: $report->{$_}" } @report_plugins ) if $tokenfile;
 	record_tokens($tokenfile,\@tokens,$time_start,time,'OK',scalar(@plugins),$tmp_long_report) if $tokenfile;
@@ -354,7 +354,7 @@ else {
 	# not using plugins.
 	$time_start = time;
 
-	# send email via SMTP	
+	# send email via SMTP
 	my $id = $time_start; # XXX should include localhost name maybe or some random number in case the same mailbox is used for multiple delivery tests
 
 	my $smtp_plugin = "$libexec/check_smtp_send";
@@ -383,7 +383,7 @@ else {
 	};
 	if( $@ ) {
 		print "EMAIL DELIVERY CRITICAL - Could not connect to SMTP server $smtp_server: $@\n";
-		exit $status{CRITICAL};	
+		exit $status{CRITICAL};
 	}
 
 	# wait before checking the delivery
@@ -472,7 +472,7 @@ sub load_modules {
 	my @missing_modules = ();
 	foreach( @_ ) {
 		eval "require $_";
-		push @missing_modules, $_ if $@;	
+		push @missing_modules, $_ if $@;
 	}
 	if( @missing_modules ) {
 		print "Missing perl modules: @missing_modules\n";
@@ -569,8 +569,8 @@ given then they will not be passed on and the default for that plugin will apply
 Also known as: -w <seconds>[,<send>[,<recv>]]
 
 When using the --plugin option, only one parameter is supported (-w <seconds>) and it will apply
-to the entire process. You can specify a warning threshold specific to each plugin in the 
-plugin command line. 
+to the entire process. You can specify a warning threshold specific to each plugin in the
+plugin command line.
 
 When using the --plugin option, no measuring of "most recent email" is done because we would
 not know how to read this information from receive plugins. This may be addressed in future versions.
@@ -584,8 +584,8 @@ given then they will not be passed on and the default for that plugin will apply
 Also known as: -c <seconds>[,<send>[,<recv>]]
 
 When using the --plugin option, only one parameter is supported (-c <seconds>) and it will apply
-to the entire process. You can specify a critical threshold specific to each plugin in the 
-plugin command line. 
+to the entire process. You can specify a critical threshold specific to each plugin in the
+plugin command line.
 
 When using the --plugin option, no measuring of "most recent email" is done because we would
 not know how to read this information from receive plugins. This may be addressed in future versions.
@@ -599,8 +599,8 @@ not know how to read this information from receive plugins. This may be addresse
 Exit with CRITICAL if the plugins do not return a status within the specified number of seconds.
 When only one parameter is used, it applies to each plugin. When multiple parameters are used
 (separated by commas) they apply to plugins in the same order the plugins were specified on the
-command line. When using --timeout but not the --plugin option, the first parameter is for 
-check_smtp_send and the second is for check_imap_receive. 
+command line. When using --timeout but not the --plugin option, the first parameter is for
+check_smtp_send and the second is for check_imap_receive.
 
 =item --alert <pluginN>
 
@@ -608,7 +608,7 @@ Exit with WARNING or CRITICAL only if a warning or error (--warning, --critical,
 occurs for specified plugins. If a warning or error occurs for non-specified plugins that run
 BEFORE the specified plugins, the exit status will be UNKNOWN.  If a warning of error occurs
 for non-specified plugins that run AFTER the specified plugins, the exit status will not be
-affected. 
+affected.
 
 You would use this option if you are using check_email_delivery with the --plugin option and
 the plugins you configure each use different servers, for example different SMTP and IMAP servers.
@@ -623,7 +623,7 @@ both servers:  for the SMTP server (first plugin) you use --alert 1, and for for
 server fails, you will get the appropriate alert. If the IMAP server fails it will not affect the
 status. When check_email_delivery runs with --alert 2 and the SMTP server fails, you will get the
 UNKNOWN return code. If the IMAP server generates an alert you will get a WARNING or CRITICAL as
-appropriate. 
+appropriate.
 
 You can repeat this option to specify multiple plugins that should cause an alert.
 Do this if you have multiple plugins on the command line but some of them involve the same server.
@@ -643,7 +643,7 @@ example, if you use the --plugin option twice to specify an SMTP plugin and an I
 you want to wait 5 seconds between sending and receiving, then you would specify --wait 5. A second
 example, if you are using the --plugin option three times, then specifying -w 5 will wait 5 seconds
 between the second and third plugins also. You can specify a different wait time
-of 10 seconds between the second and third plugins, like this:  -w 5,10. 
+of 10 seconds between the second and third plugins, like this:  -w 5,10.
 
 =item --hostname <server>
 
@@ -668,7 +668,7 @@ Use these options if the SMTP account has a different username/password than the
 IMAP account you are testing. These options take precendence over the --username and
 the --password options.
 
-These are shell-escaped; special characters are ok. 
+These are shell-escaped; special characters are ok.
 
 =item --imap-server <server>
 
@@ -688,13 +688,13 @@ Use these options if the IMAP account has a different username/password than the
 SMTP account you are testing. These options take precendence over the --username and
 the --password options.
 
-These are shell-escaped; special characters are ok. 
+These are shell-escaped; special characters are ok.
 
 =item --username <username>
 
 =item --password <password>
 
-Username and password to use when connecting to IMAP server. 
+Username and password to use when connecting to IMAP server.
 Also known as: -U <username> -P <password>
 
 Also used as the username and password for SMTP when the TLS option is enabled.
@@ -707,7 +707,7 @@ How long to wait between polls of the imap-server for the specified mail. Defaul
 
 =item --imap-retries <times>
 
-How many times to poll the imap-server for the mail, before we give up. Default is 10. 
+How many times to poll the imap-server for the mail, before we give up. Default is 10.
 
 =item --body <message>
 
@@ -720,11 +720,11 @@ Use this option to set an arbitrary header in the message. You can use it multip
 =item --mailto recipient@your.net
 
 You can send a message to multiple recipients by repeating this option or by separating
-the email addresses with commas (no whitespace allowed): 
+the email addresses with commas (no whitespace allowed):
 
-$ check_email_delivery ... --mailto recipient@your.net,recipient2@your.net --mailfrom sender@your.net 
+$ check_email_delivery ... --mailto recipient@your.net,recipient2@your.net --mailfrom sender@your.net
 
-This argument is shell-escaped; special characters or angle brackets around the address are ok. 
+This argument is shell-escaped; special characters or angle brackets around the address are ok.
 
 =item --mailfrom sender@your.net
 
@@ -733,14 +733,14 @@ Use this option to set the "from" address in the email.
 =item --imapssl
 =item --noimapssl
 
-Use this to enable or disable SSL for the IMAP plugin. 
+Use this to enable or disable SSL for the IMAP plugin.
 
-This argument is shell-escaped; special characters or angle brackets around the address are ok. 
+This argument is shell-escaped; special characters or angle brackets around the address are ok.
 
 =item --smtptls
 =item --nosmtptls
 
-Use this to enable or disable TLS/AUTH for the SMTP plugin. 
+Use this to enable or disable TLS/AUTH for the SMTP plugin.
 
 =item --libexec
 
@@ -753,17 +753,17 @@ plugins that it depends on.
 This is a new option introduced in version 0.5 of the check_email_delivery plugin.
 It frees the plugin from depending on specific external plugins and generalizes the
 work done to determine that the email loop is operational. When using the --plugin
-option, the following options are ignored: libexec, imapssl, smtptls, hostname, 
+option, the following options are ignored: libexec, imapssl, smtptls, hostname,
 username, password, smtp*, imap*, mailto, mailfrom, body, header, search.
 
 Use this option multiple times to specify the complete trip. Typically, you would use
 this twice to specify plugins for SMTP and IMAP, or SMTP and POP3.
 
 The output will be success if all the plugins return success. Each plugin should be a
-standard Nagios plugin. 
+standard Nagios plugin.
 
 A random token will be automatically generated and passed to each plugin specified on
-the command line by substituting the string %TOKEN1%. 
+the command line by substituting the string %TOKEN1%.
 
 Example usage:
 
@@ -773,7 +773,7 @@ Example usage:
  --plugin "$USER1$/check_imap_receive -H $ARG1$ -U $ARG1$ -P $ARG2$ -s SUBJECT -s 'Nagios Test %TOKEN1%.'"
 
 This technique allows for a lot of flexibility in configuring the plugins that test
-each part of your email delivery loop. 
+each part of your email delivery loop.
 
 See also: --token.
 Also known as: -p <command>
@@ -788,7 +788,7 @@ Use this option multiple times to specify formats for different tokens. For exam
 if you want %TOKEN1% to consist of only alphabetical characters but want %TOKEN2% to
 consist of only digits, then you might use these options: --token aaaaaa --token nnnnn
 
-Any tokens used in your plugin commands that have not been specified by --token <format> 
+Any tokens used in your plugin commands that have not been specified by --token <format>
 will default to --token U-X-Y
 
 Token formats:
@@ -801,7 +801,7 @@ X - a word from the pgp even list. eg aardvark
 Y - a word from the pgp odd list. eg adroitness
 
 Caution: It has been observed that some IMAP servers do not handle underscores well in the
-search criteria. For best results, avoid using underscores in your tokens. Use hyphens or commas instead. 
+search criteria. For best results, avoid using underscores in your tokens. Use hyphens or commas instead.
 
 See also: --plugin.
 Also known as: -T <format>
@@ -837,12 +837,12 @@ Also known as: -V
 
 =item --help
 
-Display this documentation and exit. Does not work in the ePN version. 
+Display this documentation and exit. Does not work in the ePN version.
 Also known as: -h
 
 =item --usage
 
-Display a short usage instruction and exit. 
+Display a short usage instruction and exit.
 
 =back
 
@@ -850,14 +850,14 @@ Display a short usage instruction and exit.
 
 =head2 Send a message with custom headers
 
-$ check_email_delivery -H mail.server.net --mailto recipient@your.net --mailfrom sender@your.net 
+$ check_email_delivery -H mail.server.net --mailto recipient@your.net --mailfrom sender@your.net
 --username recipient --password secret
 
 EMAIL DELIVERY OK - 1 seconds
 
 =head2 Set warning and critical timeouts for receive plugin only:
 
-$ check_email_delivery -H mail.server.net --mailto recipient@your.net --mailfrom sender@your.net 
+$ check_email_delivery -H mail.server.net --mailto recipient@your.net --mailfrom sender@your.net
 --username recipient --password secret -w ,,5 -c ,,15
 
 EMAIL DELIVERY OK - 1 seconds
@@ -899,10 +899,10 @@ Other than that, it attempts to follow published guidelines for Nagios plugins.
  Thu Apr 20 14:00:00 CET 2006 (by Johan Nilsson <johann (at) axis.com>)
  + version 0.2.1
  + corrected bug in getoptions ($imap_server would never ever be set from command-line...)
- + will not make $smtp_server and $imap_server == $host if they're defined on commandline 
+ + will not make $smtp_server and $imap_server == $host if they're defined on commandline
  + added support for multiple polls of imap-server, with specified intervals
  + changed default behaviour in check_imap_server (searches for the specific id in subject and deletes mails found)
- + increased default delay_warn from 65 seconds to 95 seconds 
+ + increased default delay_warn from 65 seconds to 95 seconds
 
  Thu Apr 20 16:00:00 PST 2006 (by Geoff Crompton <geoff.crompton@strategicdata.com.au>)
  + fixed a bug in getoptions
@@ -912,7 +912,7 @@ Other than that, it attempts to follow published guidelines for Nagios plugins.
  + now there is an alternate version (same but without embedded perl POD) that is compatible with the new new embedded-perl Nagios feature
  + version 0.2.3
 
- Fri Apr 27 20:32:53 PDT 2007 
+ Fri Apr 27 20:32:53 PDT 2007
  + documentation now mentions every command-line option accepted by the plugin, including abbreviations
  + changed connection error to display timeout only if timeout was the error
  + default IMAP plugin is libexec/check_imap_receive (also checking for same but with .pl extension)
@@ -958,7 +958,7 @@ Other than that, it attempts to follow published guidelines for Nagios plugins.
 
  Mon May 26 10:39:19 PDT 2008
  + added --file option to allow plugin to record status information into a tab-delimited file
- + changed default token from U_X_Y to U-X-Y 
+ + changed default token from U_X_Y to U-X-Y
  + version 0.6.2
 
  Wed Jan 14 08:29:35 PST 2009
@@ -987,7 +987,7 @@ Other than that, it attempts to follow published guidelines for Nagios plugins.
 
  Sun Jun 12 17:17:06 AST 2011
  + added --imap-mailbox option to pass through to check_imap_receive --mailbox option
- + added --ssl option to conveniently enable both --smtp-tls and --imap-ssl 
+ + added --ssl option to conveniently enable both --smtp-tls and --imap-ssl
  + version 0.7.2
 
 =head1 AUTHOR

@@ -107,7 +107,7 @@ exit $status{UNKNOWN} unless load_modules(@required_module);
 if( $help_usage ||
 	(
 	($smtp_server eq "" && !$mx_lookup) || scalar(@mailto)==0 || $mailfrom eq ""
-	) 
+	)
   ) {
 	print "Usage: $0 [-H host [-p port]] --mailto recipient\@your.net [--mailto recipient2\@your.net ...] --mailfrom sender\@your.net --body 'some text' [-w <seconds>] [-c <seconds>]\n";
 	exit $status{UNKNOWN};
@@ -137,20 +137,20 @@ if( $mx_lookup ) {
 	if( @mx ) {
 		# use the first server
 		foreach my $rr (@mx) {
-			print "pref : " . $rr->preference . " exchange: " . $rr->exchange . "\n" if $verbose > 2;			
+			print "pref : " . $rr->preference . " exchange: " . $rr->exchange . "\n" if $verbose > 2;
 		}
 		$smtp_server = $mx[0]->exchange;
 		print "smtp server: $smtp_server\n" if $verbose;
 	}
 	else {
 		print "SMTP SEND CRITICAL - Cannot find MX records for $mx_domain\n";
-		exit $status{CRITICAL};			
+		exit $status{CRITICAL};
 	}
 }
 
 # connect to SMTP server
 # create the smtp handle using Net::SMTP, Net::SMTP::SSL, Net::SMTP::TLS, or an authentication variant
-my $smtp; 
+my $smtp;
 eval {
         $smtp_port = $default_smtp_port unless $smtp_port;
         $smtp = Net::SMTP->new($smtp_server,
@@ -173,7 +173,7 @@ eval {
 if( $@ ) {
 	$@ =~ s/\n/ /g; # the error message can be multiline but we want our output to be just one line
 	print "SMTP SEND CRITICAL - $@\n";
-	exit $status{CRITICAL};	
+	exit $status{CRITICAL};
 }
 unless( $smtp ) {
 	print "SMTP SEND CRITICAL - Could not connect to $smtp_server port $smtp_port\n";
@@ -207,8 +207,8 @@ $smtp->mail($mailfrom);
 foreach( @mailto ) {
         # Net::SMTP returns false when the recipient is rejected
         my $to_returned = $smtp->to($_);
-        
-        if( !$to_returned ) { 
+
+        if( !$to_returned ) {
                 print "SMTP SEND CRITICAL - Could not send to $_\n";
                 print "Reason: Recipient rejected or authentication failed\n" if $verbose;
                 exit $status{CRITICAL};
@@ -219,7 +219,7 @@ foreach( @mailto ) {
 
 	# start data transfer (expect response 354)
 	$smtp->data();
-	
+
 	# send data
 	$smtp->datasend("To: ".join(", ",@mailto)."\n");
 	$smtp->datasend("From: $mailfrom\n");
@@ -229,16 +229,16 @@ foreach( @mailto ) {
 	$smtp->datasend("\n");
 	$smtp->datasend($body);
 	$smtp->datasend("\n");
-	
+
 eval {
 	# end data transfer (expect response 250)
-	$smtp->dataend();	
+	$smtp->dataend();
 };
 if( $@ ) {
 	$actual_response = $smtp->code();
 }
 else {
-	$actual_response = $smtp->code();	# no error means we got 250		
+	$actual_response = $smtp->code();	# no error means we got 250
 }
 
 eval {
@@ -284,7 +284,7 @@ sub load_modules {
 	my @missing_modules = ();
 	foreach( @_ ) {
 		eval "require $_";
-		push @missing_modules, $_ if $@;	
+		push @missing_modules, $_ if $@;
 	}
 	if( @missing_modules ) {
 		print "Missing perl modules: @missing_modules\n";
@@ -297,7 +297,7 @@ sub load_modules {
 sub get_tls_error {
 	my ($errormsg) = @_;
 	$errormsg =~ m/: (\d+) (.+)/;
-	my $code = $1;		
+	my $code = $1;
 	return $code;
 }
 
@@ -400,15 +400,15 @@ Also known as: -w <seconds>
 =item --critical <seconds>
 
 Return a critical status if it takes longer than <seconds> to connect to the SMTP server. Default is 30 seconds.
-Also known as: -c <seconds> 
+Also known as: -c <seconds>
 
 =item --timeout <seconds>
 
 Abort with critical status if it takes longer than <seconds> to connect to the SMTP server. Default is 60 seconds.
-The difference between timeout and critical is that, with the default settings, if it takes 45 seconds to 
+The difference between timeout and critical is that, with the default settings, if it takes 45 seconds to
 connect to the server then the connection will succeed but the plugin will return CRITICAL because it took longer
 than 30 seconds.
-Also known as: -t <seconds> 
+Also known as: -t <seconds>
 
 =item --hostname <server>
 
@@ -484,15 +484,15 @@ Grab the body of the email message from stdin.
 =item --mailto recipient@your.net
 
 You can send a message to multiple recipients by repeating this option or by separating
-the email addresses with commas (no whitespace allowed): 
+the email addresses with commas (no whitespace allowed):
 
-$ check_smtp_send -H mail.server.net --mailto recipient@your.net,recipient2@your.net --mailfrom sender@your.net 
+$ check_smtp_send -H mail.server.net --mailto recipient@your.net,recipient2@your.net --mailfrom sender@your.net
 
 SMTP SEND OK - 1 seconds
 
 =item --mailfrom sender@your.net
 
-Use this option to set the "from" address in the email. 
+Use this option to set the "from" address in the email.
 
 =item --template
 
@@ -508,13 +508,13 @@ on each machine.
 When you enable the --template option, the message body and headers are parsed by
 Text::Template. Even a message body provided using the --stdin option will be parsed.
 See the Text::Template manual for more information, but in general any expression
-written in Perl will work. 
+written in Perl will work.
 
 There is one convenience function provided to you, trim, which will remove leading and trailing whitespace
 from its parameter. Here's an example:
 
- check_smtp_send -H mail.server.net --mailto recipient@your.net --mailfrom sender@your.net 
- --template --body 'hello, this message is from {use Sys::Hostname; hostname}' 
+ check_smtp_send -H mail.server.net --mailto recipient@your.net --mailfrom sender@your.net
+ --template --body 'hello, this message is from {use Sys::Hostname; hostname}'
  --header 'Subject: test message from {trim(`whoami`)}'
 
 
@@ -549,12 +549,12 @@ Also known as: -V
 
 =item --help
 
-Display this documentation and exit. Does not work in the ePN version. 
+Display this documentation and exit. Does not work in the ePN version.
 Also known as: -h
 
 =item --usage
 
-Display a short usage instruction and exit. 
+Display a short usage instruction and exit.
 
 =back
 
@@ -562,7 +562,7 @@ Display a short usage instruction and exit.
 
 =head2 Send a message with custom headers
 
-$ check_smtp_send -H mail.server.net --mailto recipient@your.net --mailfrom sender@your.net 
+$ check_smtp_send -H mail.server.net --mailto recipient@your.net --mailfrom sender@your.net
 --body 'Homeruns 5' --header 'Subject: Hello, world!' --header 'X-Your-Header: Yes'
 
 SMTP SEND OK - 1 seconds
@@ -610,7 +610,7 @@ Other than that, it attempts to follow published guidelines for Nagios plugins.
  Fri Apr 27 20:26:42 PDT 2007
  + documentation now mentions every command-line option accepted by the plugin, including abbreviations
  + version 0.3
- 
+
  Sun Oct 21 10:34:14 PDT 2007
  + added support for TLS and authentication via the Net::SMTP::TLS module. see --tls option.
  + version 0.4
@@ -634,7 +634,7 @@ Other than that, it attempts to follow published guidelines for Nagios plugins.
  Mon May 26 09:12:14 PDT 2008
  + fixed warning and critical messages to use "more than" or "less than" instead of the angle brackets, to make them more web friendly
  + version 0.4.4
- 
+
  Wed Jul  2 07:12:35 PDT 2008
  + added --expect-response option submitted by Christian Kauhaus <kc@gocept.com>
  + added support for authentication via Net::SMTP_auth. see --auth option.
@@ -697,4 +697,3 @@ Jonathan Buhacoff <jonathan@buhacoff.net>
  http://www.gnu.org/licenses/gpl.txt
 
 =cut
-

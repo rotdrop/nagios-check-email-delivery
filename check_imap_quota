@@ -90,9 +90,9 @@ my $imap;
 eval {
 	local $SIG{ALRM} = sub { die "exceeded timeout $timeout seconds\n" }; # NB: \n required, see `perldoc -f alarm`
 	alarm $timeout;
-	
+
 	if( $ssl || $tls ) {
-		$imap_port = $default_imap_ssl_port unless $imap_port;		
+		$imap_port = $default_imap_ssl_port unless $imap_port;
 		my $socket = IO::Socket::SSL->new("$imap_server:$imap_port");
 		die IO::Socket::SSL::errstr() unless $socket;
 		$socket->autoflush(1);
@@ -104,8 +104,8 @@ eval {
 		$imap->login() or die "$@";
 	}
 	else {
-		$imap_port = $default_imap_port unless $imap_port;		
-		$imap = Mail::IMAPClient->new(Debug => 0 );		
+		$imap_port = $default_imap_port unless $imap_port;
+		$imap = Mail::IMAPClient->new(Debug => 0 );
 		$imap->Server("$imap_server:$imap_port");
 		$imap->User($username);
 		$imap->Password($password);
@@ -120,7 +120,7 @@ eval {
 if( $@ ) {
 	chomp $@;
 	print "IMAP QUOTA CRITICAL - Could not connect to $imap_server port $imap_port: $@\n";
-	exit $status{CRITICAL};	
+	exit $status{CRITICAL};
 }
 unless( $imap ) {
 	print "IMAP QUOTA CRITICAL - Could not connect to $imap_server port $imap_port: $@\n";
@@ -163,7 +163,7 @@ eval {
 if( $@ ) {
 	chomp $@;
 	print "IMAP QUOTA CRITICAL - Could not check quota at $imap_server port $imap_port: $@\n";
-	exit $status{CRITICAL};	
+	exit $status{CRITICAL};
 }
 
 
@@ -195,7 +195,7 @@ sub load_modules {
 	my @missing_modules = ();
 	foreach( @_ ) {
 		eval "require $_";
-		push @missing_modules, $_ if $@;	
+		push @missing_modules, $_ if $@;
 	}
 	if( @missing_modules ) {
 		print "Missing perl modules: @missing_modules\n";
@@ -266,10 +266,10 @@ Also known as: -c <seconds>
 =item --timeout <seconds>
 
 Abort with critical status if it takes longer than <seconds> to connect to the IMAP server. Default is 60 seconds.
-The difference between timeout and critical is that, with the default settings, if it takes 45 seconds to 
+The difference between timeout and critical is that, with the default settings, if it takes 45 seconds to
 connect to the server then the connection will succeed but the plugin will return CRITICAL because it took longer
 than 30 seconds.
-Also known as: -t <seconds> 
+Also known as: -t <seconds>
 
 =item --hostname <server>
 
@@ -285,19 +285,19 @@ Also known as: -p <number>
 
 =item --password <password>
 
-Username and password to use when connecting to IMAP server. 
+Username and password to use when connecting to IMAP server.
 Also known as: -U <username> -P <password>
 
 =item --mailbox <mailbox>
 
-Use this option to specify the mailbox to search for messages. Default is INBOX. 
+Use this option to specify the mailbox to search for messages. Default is INBOX.
 Also known as: -m <mailbox>
 
 =item --ssl
 
 =item --nossl
 
-Enable SSL protocol. Requires IO::Socket::SSL. 
+Enable SSL protocol. Requires IO::Socket::SSL.
 
 Using this option automatically changes the default port from 143 to 993. You can still
 override this from the command line using the --port option.
@@ -325,12 +325,12 @@ Also known as: -V
 
 =item --help
 
-Display this documentation and exit. Does not work in the ePN version. 
+Display this documentation and exit. Does not work in the ePN version.
 Also known as: -h
 
 =item --usage
 
-Display a short usage instruction and exit. 
+Display a short usage instruction and exit.
 
 =back
 
@@ -428,4 +428,3 @@ Jonathan Buhacoff <jonathan@buhacoff.net>
  http://www.gnu.org/licenses/gpl.txt
 
 =cut
-
